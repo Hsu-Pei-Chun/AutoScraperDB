@@ -1,4 +1,5 @@
 from config.config import USER_AGENTS
+from .parser import get_last_page
 import random
 import requests
 import time
@@ -19,17 +20,40 @@ def fetch_page(url, retries = 3):
         time.sleep(5)
     return None
 
+
+def fetch_all_pages(base_url):
+    first_page_content = fetch_page(f"{base_url}?p=1")
+
+    if not first_page_content:
+        logging.error("無法獲取首頁內容，終止爬取")
+        return []
+    
+    last_page = get_last_page(first_page_content)
+    all_data = []
+
+    for page in range(1, last_page + 1):
+        url = f"{base_url}?p={page}"
+        page_content = fetch_page(url)
+
+        if not page_content:
+            logging.error(f"無法獲取頁面 {url} 的內容")
+            continue
+
+        logging.info(f"正在解析第 {page} 頁")
+        all_data.append(page_content)
+        time.sleep(2)
+
+    return all_data
+
+
+
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
 
-    test_url = "https://www.vscinemas.com.tw/vsweb/film/index.aspx"
-    page_content = fetch_page(test_url)
+    base_url = "https://www.vscinemas.com.tw/vsweb/film/index.aspx"
+    pages_content = fetch_all_pages(base_url)
 
-    if page_content:
-        print("成功獲取網頁內容")
-        print(page_content[:500])  # 只顯示前 500 個字元，避免輸出太多
-    else:
-        print("獲取網頁內容失敗")
+    logging.info(f"共抓取了 {len(pages_content)} 頁")
